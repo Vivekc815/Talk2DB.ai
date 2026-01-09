@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from app.utils.utils import NLP_converted_SQL
 from app.services.query_validator import sql_safety
@@ -7,33 +7,48 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
 from app.api.v1.history import history_store
-from app.core.database import session, engine
+from app.core.database import SessionLocal, engine
 from app.models import database_models
 from app.models.database_models import query_history
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-database_models.Base.metadata.create_all(bind = engine)
-db = session()
-
+database_models.Base.metadata.create_all(bind=engine)
 
 load_dotenv()
+
+# Get environment variables
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", FRONTEND_URL).split(",") if os.getenv("ALLOWED_ORIGINS") else [FRONTEND_URL]
+
 class HistorySaveRequest(BaseModel):
     user_id: int
     user_query: str
     generated_sql: str
 
-
 class QueryRequest(BaseModel):
-    user_id : int
+    user_id: int
     query: str
-def save_to_db(user_id, user_query, generated_sql):
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def save_to_db(db: Session, user_id, user_query, generated_sql):
+    try:
         new_record = query_history(
             user_id=user_id,
             user_query=user_query,
             generated_sql=generated_sql
-            )
+        )
         db.add(new_record)
         db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error saving to history: {e}")
 
 # Create FastAPI app
 app = FastAPI(
@@ -42,10 +57,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware (allows frontend to call API)
+# CORS middleware - use environment variable in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -60,11 +75,8 @@ def read_root():
         "docs": "/docs"
     }
 
-
-
-
 @app.post("/answer")
-def sanitize_sql(request: QueryRequest):
+def sanitize_sql(request: QueryRequest, db: Session = Depends(get_db)):
     sql = request.query
     description = NLP_converted_SQL(sql)  # NLP generates SQL
 
@@ -81,9 +93,13 @@ def sanitize_sql(request: QueryRequest):
         except Exception as e:
             TF_output = False
             summary = str(e)
+            db.rollback()
 
     # Save to DB history
-    save_to_db(request.user_id, sql, description)
+    try:
+        save_to_db(db, request.user_id, sql, description)
+    except Exception as e:
+        print(f"Error saving to history: {e}")
 
     # Return response
     return {
@@ -94,15 +110,13 @@ def sanitize_sql(request: QueryRequest):
         "results": results if TF_output else None
     }
 
-
-    
-
 @app.get("/history/{user_id}")
-def get_history(user_id):
-    records = db.query(query_history)\
-                .filter(query_history.user_id == user_id)\
-                .all()
-    return {"data": records}
-
-
-
+def get_history(user_id: int, db: Session = Depends(get_db)):
+    try:
+        records = db.query(query_history)\
+                    .filter(query_history.user_id == user_id)\
+                    .all()
+        return {"data": records}
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e), "data": []}
