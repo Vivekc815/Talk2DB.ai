@@ -1,6 +1,6 @@
 .results-container {
   margin-top: 2rem;
-  background-color: white;
+  background: linear-gradient(135deg, #1a1f3a 0%, #1f2540 100%);
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -28,7 +28,7 @@
 }
 
 .loading-spinner p {
-  color: #666;
+  color: #b0b0b0;
   font-size: 1rem;
 }
 
@@ -49,18 +49,18 @@
 }
 
 .empty-state h3 {
-  color: #333;
+  color: #e0e0e0;
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
 }
 
 .empty-state p {
-  color: #666;
+  color: #b0b0b0;
   margin-bottom: 2rem;
 }
 
 .example-queries {
-  background-color: #f8f9fa;
+  background: rgba(26, 31, 58, 0.5);
   border-radius: 8px;
   padding: 1.5rem;
   margin-top: 2rem;
@@ -69,7 +69,7 @@
 
 .examples-title {
   font-weight: 600;
-  color: #333;
+  color: #e0e0e0;
   margin-bottom: 0.75rem;
 }
 
@@ -88,7 +88,7 @@
 
 .example-queries li:before {
   content: "→ ";
-  color: #666;
+  color: #b0b0b0;
 }
 
 /* SQL Explanation Section */
@@ -142,7 +142,7 @@
 
 .step-content h4 {
   margin: 0 0 0.5rem 0;
-  color: #333;
+  color: #e0e0e0;
   font-size: 1rem;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .sql-explanation {
-  color: #666;
+  color: #b0b0b0;
   font-size: 0.85rem;
   margin: 0.5rem 0 0 0;
   line-height: 1.5;
@@ -202,13 +202,13 @@
 .error-explanation {
   margin: 0.5rem 0 0 0;
   font-size: 0.9rem;
-  color: #666;
+  color: #b0b0b0;
 }
 
 /* Results Section */
 .results-section {
   padding: 2rem;
-  background-color: #f8f9fa;
+  background: rgba(26, 31, 58, 0.5);
 }
 
 .results-header {
@@ -222,15 +222,15 @@
 
 .results-header h3 {
   margin: 0;
-  color: #333;
+  color: #e0e0e0;
   font-size: 1.5rem;
 }
 
 .results-count {
   margin: 0;
-  color: #666;
+  color: #b0b0b0;
   font-size: 0.95rem;
-  background-color: white;
+  background: linear-gradient(135deg, #1a1f3a 0%, #1f2540 100%);
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-weight: 500;
@@ -239,23 +239,23 @@
 .no-results {
   text-align: center;
   padding: 3rem 2rem;
-  background-color: white;
+  background: linear-gradient(135deg, #1a1f3a 0%, #1f2540 100%);
   border-radius: 8px;
 }
 
 .no-results p {
-  color: #666;
+  color: #b0b0b0;
   margin: 0.5rem 0;
 }
 
 .hint {
   font-size: 0.9rem;
-  color: #999;
+  color: #a0a0a0;
 }
 
 /* Table Container */
 .table-container {
-  background-color: white;
+  background: linear-gradient(135deg, #1a1f3a 0%, #1f2540 100%);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -319,7 +319,7 @@
 }
 
 .null-value {
-  color: #999;
+  color: #a0a0a0;
   font-style: italic;
 }
 
