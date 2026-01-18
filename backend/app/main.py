@@ -7,6 +7,7 @@ from app.services.document_parser import parse_csv, parse_pdf, schema_to_text as
 from app.services.db_connector import get_schema_from_database, test_connection, create_db_engine, execute_query_on_db
 import os
 import json
+import traceback
 from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
@@ -339,7 +340,6 @@ async def upload_pdf_file(
     except Exception as e:
         db.rollback()
         print(f"PDF upload error: {str(e)}")
-        import traceback
         traceback.print_exc()
         return {
             "success": False,
