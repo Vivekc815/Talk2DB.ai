@@ -2,46 +2,75 @@
 Document Parser Service
 Extracts schema from PDF documents and CSV files
 """
-import pandas as pd
-import pdfplumber
+import csv
 import io
 from typing import Dict, Optional
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
 
+# Try to import pandas, but fallback to built-in csv if not available
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
+
+# Try to import pdfplumber
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    PDFPLUMBER_AVAILABLE = False
+
 load_dotenv()
 
 def parse_csv(file_content: bytes, filename: str = "uploaded_data") -> Dict:
     """Extract schema from CSV file"""
     try:
-        # Read CSV
-        df = pd.read_csv(io.BytesIO(file_content))
-        
-        # Infer column types
-        columns = []
-        for col in df.columns:
-            dtype = str(df[col].dtype)
+        if PANDAS_AVAILABLE:
+            # Use pandas if available (better type inference)
+            df = pd.read_csv(io.BytesIO(file_content))
             
-            # Map pandas dtypes to SQL types
-            if 'int' in dtype:
-                sql_type = 'INTEGER'
-            elif 'float' in dtype:
-                sql_type = 'DECIMAL'
-            elif 'bool' in dtype:
-                sql_type = 'BOOLEAN'
-            elif 'datetime' in dtype:
-                sql_type = 'TIMESTAMP'
-            else:
-                sql_type = 'VARCHAR(255)'
+            columns = []
+            for col in df.columns:
+                dtype = str(df[col].dtype)
+                
+                # Map pandas dtypes to SQL types
+                if 'int' in dtype:
+                    sql_type = 'INTEGER'
+                elif 'float' in dtype:
+                    sql_type = 'DECIMAL'
+                elif 'bool' in dtype:
+                    sql_type = 'BOOLEAN'
+                elif 'datetime' in dtype:
+                    sql_type = 'TIMESTAMP'
+                else:
+                    sql_type = 'VARCHAR(255)'
+                
+                columns.append({
+                    "name": col,
+                    "type": sql_type,
+                    "nullable": True,
+                    "primary_key": False,
+                    "description": f"Column from CSV file"
+                })
+        else:
+            # Fallback to built-in csv module
+            csv_file = io.StringIO(file_content.decode('utf-8'))
+            reader = csv.DictReader(csv_file)
             
-            columns.append({
-                "name": col,
-                "type": sql_type,
-                "nullable": True,
-                "primary_key": False,
-                "description": f"Column from CSV file"
-            })
+            # Get column names from first row
+            columns = []
+            if reader.fieldnames:
+                for col_name in reader.fieldnames:
+                    columns.append({
+                        "name": col_name,
+                        "type": "VARCHAR(255)",  # Default type without pandas
+                        "nullable": True,
+                        "primary_key": False,
+                        "description": f"Column from CSV file"
+                    })
         
         schema = {
             "tables": [{
@@ -56,6 +85,9 @@ def parse_csv(file_content: bytes, filename: str = "uploaded_data") -> Dict:
 
 def extract_text_from_pdf(file_content: bytes) -> str:
     """Extract text from PDF file"""
+    if not PDFPLUMBER_AVAILABLE:
+        raise Exception("pdfplumber is not installed. Please install it: pip install pdfplumber")
+    
     try:
         pdf_file = io.BytesIO(file_content)
         text = ""
@@ -140,10 +172,10 @@ If no schema is found, return empty tables array."""
     except Exception as e:
         error_msg = str(e)
         # Provide more helpful error messages
-        if "pdfplumber" in error_msg.lower():
+        if "pdfplumber" in error_msg.lower() or "not installed" in error_msg.lower():
             return {
                 "tables": [],
-                "error": f"Error reading PDF file: {error_msg}. Make sure the file is a valid PDF with readable text (not scanned images)."
+                "error": f"Error reading PDF file: {error_msg}. Make sure pdfplumber is installed: pip install pdfplumber"
             }
         elif "openai" in error_msg.lower() or "api" in error_msg.lower():
             return {
