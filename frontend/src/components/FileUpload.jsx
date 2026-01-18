@@ -70,7 +70,7 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
     <div className="file-upload-container">
       <h3>📁 Upload Schema File</h3>
       <p className="upload-description">
-        Upload a SQL or CSV file to extract database schema
+        Upload SQL, CSV, or PDF files to extract database schema
       </p>
       
       <div className="upload-form">

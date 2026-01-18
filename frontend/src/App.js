@@ -4,6 +4,7 @@ import QueryInput from './components/QueryInput';
 import QueryResults from './components/QueryResults';
 import DatabaseSchema from './components/DatabaseSchema';
 import FileUpload from './components/FileUpload';
+import DatabaseConnection from './components/DatabaseConnection';
 import SchemaManager from './components/SchemaManager';
 import History from './components/History';
 import './App.css';
@@ -91,6 +92,9 @@ function App() {
             
             {/* File Upload Section */}
             <FileUpload userId={userId} onSchemaUploaded={handleSchemaUploaded} />
+            
+            {/* Database Connection Section */}
+            <DatabaseConnection userId={userId} onConnectionSuccess={handleSchemaUploaded} />
             
             {/* Schema Manager */}
             <SchemaManager userId={userId} onSchemaSelect={handleSchemaSelect} />
