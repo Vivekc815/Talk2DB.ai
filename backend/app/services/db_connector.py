@@ -2,8 +2,9 @@
 Database Connector Service
 Handles connections to different database types
 """
-from sqlalchemy import create_engine, inspect
-from typing import Dict, Optional
+from sqlalchemy import create_engine, inspect, text
+from typing import Dict, Optional, List
+from sqlalchemy.exc import SQLAlchemyError
 
 def create_db_engine(db_type: str, connection_string: str):
     """Create database engine based on type"""
@@ -33,7 +34,10 @@ def get_schema_from_database(db_type: str, connection_string: str) -> Dict:
         
         for table_name in table_names:
             columns = []
-            primary_keys = inspector.get_pk_constraint(table_name)['constrained_columns']
+            try:
+                primary_keys = inspector.get_pk_constraint(table_name)['constrained_columns']
+            except:
+                primary_keys = []
             
             # Get columns
             for column in inspector.get_columns(table_name):
@@ -41,7 +45,7 @@ def get_schema_from_database(db_type: str, connection_string: str) -> Dict:
                     "name": column['name'],
                     "type": str(column['type']),
                     "nullable": column['nullable'],
-                    "primary_key": column['name'] in primary_keys,
+                    "primary_key": column['name'] in primary_keys if primary_keys else False,
                     "description": f"Column from {table_name} table"
                 }
                 columns.append(col_info)
@@ -60,7 +64,47 @@ def test_connection(db_type: str, connection_string: str) -> bool:
     try:
         engine = create_db_engine(db_type, connection_string)
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
         return True
     except Exception as e:
         return False
+
+def execute_query_on_db(db_type: str, connection_string: str, sql_query: str) -> Dict:
+    """
+    Execute SQL query on connected database and return results
+    """
+    try:
+        engine = create_db_engine(db_type, connection_string)
+        
+        with engine.connect() as conn:
+            result = conn.execute(text(sql_query))
+            
+            # Fetch all rows
+            rows = result.fetchall()
+            
+            # Convert to list of dicts
+            columns = result.keys()
+            results = []
+            for row in rows:
+                row_dict = {}
+                for i, col in enumerate(columns):
+                    row_dict[col] = row[i]
+                results.append(row_dict)
+            
+            return {
+                "success": True,
+                "results": results,
+                "row_count": len(results)
+            }
+    except SQLAlchemyError as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "results": None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "results": None
+        }

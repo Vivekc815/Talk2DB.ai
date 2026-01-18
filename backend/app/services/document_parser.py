@@ -3,8 +3,14 @@ Document Parser Service
 Extracts schema from PDF documents and CSV files
 """
 import pandas as pd
+import pdfplumber
 import io
 from typing import Dict, Optional
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def parse_csv(file_content: bytes, filename: str = "uploaded_data") -> Dict:
     """Extract schema from CSV file"""
@@ -48,43 +54,85 @@ def parse_csv(file_content: bytes, filename: str = "uploaded_data") -> Dict:
     except Exception as e:
         raise Exception(f"Error parsing CSV: {str(e)}")
 
-def parse_pdf_simple(file_content: bytes) -> Dict:
-    """
-    Simple PDF parser - extracts text and uses AI to identify schema
-    For production, you might want to use pdfplumber or PyPDF2
-    """
-    # This is a placeholder - in production, you'd:
-    # 1. Extract text from PDF using pdfplumber
-    # 2. Use OpenAI to analyze text and extract schema
-    # 3. Return structured schema
-    
-    return {
-        "tables": [],
-        "note": "PDF parsing requires text extraction and AI analysis"
-    }
+def extract_text_from_pdf(file_content: bytes) -> str:
+    """Extract text from PDF file"""
+    try:
+        pdf_file = io.BytesIO(file_content)
+        text = ""
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+        
+        return text
+    except Exception as e:
+        raise Exception(f"Error extracting text from PDF: {str(e)}")
 
-def extract_schema_with_ai(file_content: bytes, file_type: str, filename: str) -> Dict:
+def parse_pdf(file_content: bytes, filename: str = "document") -> Dict:
     """
-    Use AI to extract schema from documents
-    This would be called for PDF files or complex documents
+    Parse PDF document using AI to extract schema information
     """
-    from openai import OpenAI
-    import os
-    from dotenv import load_dotenv
-    
-    load_dotenv()
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    
-    if file_type == 'csv':
-        return parse_csv(file_content, filename)
-    
-    # For PDF, extract text first (simplified - in production use pdfplumber)
-    # Then use AI to understand structure
-    # For now, return a placeholder
-    return {
-        "tables": [],
-        "message": "PDF schema extraction requires text extraction. Use CSV or SQL files for now."
-    }
+    try:
+        # Extract text from PDF
+        pdf_text = extract_text_from_pdf(file_content)
+        
+        if not pdf_text or len(pdf_text.strip()) < 50:
+            return {
+                "tables": [],
+                "error": "PDF appears to be empty or could not extract text. Make sure the PDF contains readable text (not scanned images)."
+            }
+        
+        # Use AI to extract schema from PDF text
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        prompt = f"""Analyze the following database documentation text and extract database schema information (tables and columns).
+
+Text from PDF:
+{pdf_text[:3000]}  # Limit to avoid token limits
+
+Extract any CREATE TABLE statements, table definitions, or database schema information.
+If you find database tables, list them in this format:
+
+Table: table_name
+- column1 (type) [description]
+- column2 (type) [description]
+
+Return the schema in JSON format:
+{{
+    "tables": [
+        {{
+            "name": "table_name",
+            "columns": [
+                {{"name": "column1", "type": "VARCHAR(100)", "nullable": true, "primary_key": false, "description": "description"}}
+            ]
+        }}
+    ]
+}}
+
+If no schema is found, return empty tables array."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a database schema extraction expert. Extract table and column information from documentation."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        import json
+        result = json.loads(response.choices[0].message.content)
+        
+        # Validate and format result
+        if "tables" in result:
+            return result
+        else:
+            return {"tables": []}
+            
+    except Exception as e:
+        raise Exception(f"Error parsing PDF: {str(e)}")
 
 def schema_to_text(schema: Dict) -> str:
     """Convert schema dictionary to text format for NLP"""

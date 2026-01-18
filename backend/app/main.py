@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.utils.utils import NLP_converted_SQL
 from app.services.query_validator import sql_safety
 from app.services.sql_parser import parse_sql_file, schema_to_text as sql_schema_to_text
-from app.services.document_parser import parse_csv, schema_to_text as doc_schema_to_text
-from app.services.db_connector import get_schema_from_database, test_connection
+from app.services.document_parser import parse_csv, parse_pdf, schema_to_text as doc_schema_to_text
+from app.services.db_connector import get_schema_from_database, test_connection, create_db_engine, execute_query_on_db
 import os
 import json
 from dotenv import load_dotenv
@@ -34,6 +34,9 @@ class QueryRequest(BaseModel):
     user_id: int
     query: str
     schema_id: int = None  # Optional: use specific schema
+    connection_id: int = None  # Optional: execute on connected database
+    db_type: str = None  # Optional: for connected database
+    connection_string: str = None  # Optional: for connected database
 
 class SchemaRequest(BaseModel):
     user_id: int
@@ -83,7 +86,7 @@ def read_root():
         "message": "Welcome to Talk2DB API",
         "status": "running",
         "version": "2.0.0",
-        "features": ["SQL file upload", "CSV file upload", "Dynamic schema support"],
+        "features": ["SQL file upload", "CSV file upload", "PDF file upload", "Database connections (PostgreSQL, MySQL)", "Dynamic schema support"],
         "docs": "/docs"
     }
 
@@ -113,13 +116,23 @@ def sanitize_sql(request: QueryRequest, db: Session = Depends(get_db)):
     # Safety check
     TF_output, summary = sql_safety(description)
     
-    # Execute only if safe (on default database)
+    # Execute only if safe (on default or connected database)
     results = None
     if TF_output:
         try:
-            results = db.execute(text(description)).fetchall()
-            # Convert rows to dict
-            results = [dict(row._mapping) for row in results]
+            # If connection provided, execute on connected database
+            if request.connection_string and request.db_type:
+                query_result = execute_query_on_db(request.db_type, request.connection_string, description)
+                if query_result["success"]:
+                    results = query_result["results"]
+                else:
+                    TF_output = False
+                    summary = query_result.get("error", "Query execution failed on connected database")
+            else:
+                # Execute on default database
+                results = db.execute(text(description)).fetchall()
+                # Convert rows to dict
+                results = [dict(row._mapping) for row in results]
         except Exception as e:
             TF_output = False
             summary = str(e)
@@ -223,6 +236,59 @@ async def upload_csv_file(
         return {
             "success": True,
             "message": "CSV file uploaded and schema extracted successfully",
+            "schema_id": schema_record.id,
+            "schema": schema_dict,
+            "schema_text": schema_text,
+            "tables": schema_dict.get("tables", [])
+        }
+    except Exception as e:
+        db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@app.post("/upload/pdf")
+async def upload_pdf_file(
+    user_id: int = Form(...),
+    schema_name: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Upload PDF file and extract schema using AI"""
+    try:
+        # Read file content
+        content = await file.read()
+        filename = file.filename or "document"
+        
+        # Parse PDF
+        schema_dict = parse_pdf(content, filename)
+        
+        if not schema_dict.get("tables"):
+            return {
+                "success": False,
+                "error": schema_dict.get("error", "No database schema found in PDF. Please ensure the PDF contains database documentation with table definitions.")
+            }
+        
+        # Convert to text format
+        schema_text = doc_schema_to_text(schema_dict)
+        
+        # Save schema to database
+        schema_record = database_schema(
+            user_id=user_id,
+            schema_name=schema_name,
+            schema_type="pdf",
+            schema_data=json.dumps(schema_dict),
+            file_name=file.filename,
+            is_active=True
+        )
+        db.add(schema_record)
+        db.commit()
+        db.refresh(schema_record)
+        
+        return {
+            "success": True,
+            "message": "PDF file uploaded and schema extracted successfully",
             "schema_id": schema_record.id,
             "schema": schema_dict,
             "schema_text": schema_text,
@@ -357,6 +423,60 @@ def delete_schema(user_id: int, schema_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         return {"success": False, "error": str(e)}
+
+@app.post("/query/database")
+def query_connected_database(
+    user_id: int,
+    query: str,
+    db_type: str,
+    connection_string: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Query a connected database using NLP
+    This endpoint generates SQL from NLP and executes it on the connected database
+    """
+    try:
+        # Extract schema from connected database
+        schema_dict = get_schema_from_database(db_type, connection_string)
+        schema_text = doc_schema_to_text(schema_dict)
+        
+        # Generate SQL with schema
+        description = NLP_converted_SQL(query, schema_text)
+        
+        # Safety check
+        TF_output, summary = sql_safety(description)
+        
+        # Execute on connected database
+        results = None
+        if TF_output:
+            query_result = execute_query_on_db(db_type, connection_string, description)
+            if query_result["success"]:
+                results = query_result["results"]
+            else:
+                TF_output = False
+                summary = query_result.get("error", "Query execution failed")
+        
+        # Save to history (on default DB, not connected DB)
+        try:
+            save_to_db(db, user_id, query, description)
+        except Exception as e:
+            print(f"Error saving to history: {e}")
+        
+        return {
+            "query": query,
+            "sql": description,
+            "is_safe": TF_output,
+            "error": summary if not TF_output else None,
+            "results": results if TF_output else None,
+            "schema_used": True,
+            "database_type": db_type
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 @app.get("/history/{user_id}")
 def get_history(user_id: int, db: Session = Depends(get_db)):

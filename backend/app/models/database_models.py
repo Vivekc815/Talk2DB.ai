@@ -21,3 +21,15 @@ class database_schema(Base):
     file_name = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(TIMESTAMP, default=func.now())
+
+class database_connection(Base):
+    """Store database connection information (encrypted in production)"""
+    __tablename__ = "database_connections"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer)
+    connection_name = Column(String(100))
+    db_type = Column(String(50))  # "postgresql", "mysql", "sqlite"
+    connection_string = Column(Text)  # Encrypted in production - store hashed/encrypted
+    schema_id = Column(Integer)  # Reference to database_schema
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP, default=func.now())

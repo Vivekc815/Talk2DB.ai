@@ -41,8 +41,10 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
         response = await queryAPI.uploadSQLFile(userId, schemaName, file);
       } else if (fileType === 'csv') {
         response = await queryAPI.uploadCSVFile(userId, schemaName, file);
+      } else if (fileType === 'pdf') {
+        response = await queryAPI.uploadPDFFile(userId, schemaName, file);
       } else {
-        setError('Unsupported file type. Please upload .sql or .csv files');
+        setError('Unsupported file type. Please upload .sql, .csv, or .pdf files');
         setLoading(false);
         return;
       }
@@ -89,7 +91,7 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
           <input
             id="fileInput"
             type="file"
-            accept=".sql,.csv"
+            accept=".sql,.csv,.pdf"
             onChange={handleFileChange}
             className="file-input"
           />

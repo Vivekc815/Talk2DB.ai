@@ -86,6 +86,43 @@ export const queryAPI = {
     }
   },
 
+  // Upload PDF file
+  uploadPDFFile: async (userId, schemaName, file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('user_id', userId);
+      formData.append('schema_name', schemaName);
+
+      const response = await api.post('/upload/pdf', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 120000, // 120 seconds for PDF processing (AI takes time)
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: error.message };
+    }
+  },
+
+  // Query connected database
+  queryConnectedDatabase: async (userId, query, dbType, connectionString) => {
+    try {
+      const response = await api.post('/query/database', {
+        user_id: userId,
+        query: query,
+        db_type: dbType,
+        connection_string: connectionString
+      }, {
+        timeout: 60000, // 60 seconds
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: error.message };
+    }
+  },
+
   // Connect to external database
   connectDatabase: async (userId, schemaName, dbType, connectionString) => {
     try {
