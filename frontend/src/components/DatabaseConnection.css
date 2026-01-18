@@ -1,30 +1,40 @@
 .database-connection-container {
-  background-color: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.75rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.database-connection-container:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
 }
 
 .connection-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .connection-header h3 {
   margin: 0;
-  color: #333;
-  font-size: 1.3rem;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
 .toggle-button {
-  width: 32px;
-  height: 32px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   border: 2px solid #667eea;
-  background-color: white;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   color: #667eea;
   font-size: 1.5rem;
   cursor: pointer;
@@ -32,130 +42,159 @@
   align-items: center;
   justify-content: center;
   transition: all 0.3s;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 .toggle-button:hover {
-  background-color: #667eea;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
 .connection-description {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.75rem 0;
   color: #666;
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .connection-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .form-group label {
   font-weight: 600;
-  color: #333;
-  font-size: 0.95rem;
+  color: #1a1a1a;
+  font-size: 1rem;
 }
 
 .connection-input {
-  padding: 0.75rem;
+  padding: 0.875rem 1rem;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
+  background: #fafafa;
 }
 
 .connection-input:focus {
   outline: none;
   border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .connection-textarea {
-  padding: 0.75rem;
+  padding: 0.875rem 1rem;
   border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 0.9rem;
   font-family: monospace;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
   resize: vertical;
+  background: #fafafa;
+  line-height: 1.6;
 }
 
 .connection-textarea:focus {
   outline: none;
   border-color: #667eea;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .connection-hint {
-  margin-top: 0.25rem;
-  padding: 0.5rem;
-  background-color: #f0f0f0;
-  border-radius: 4px;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-radius: 8px;
   font-size: 0.85rem;
-  color: #666;
+  color: #555;
   font-family: monospace;
   word-break: break-all;
+  font-weight: 500;
 }
 
 .connect-button {
-  padding: 0.75rem 1.5rem;
+  padding: 0.875rem 1.75rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 .connect-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.connect-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .connect-button:disabled {
-  background: #cccccc;
+  background: linear-gradient(135deg, #cccccc 0%, #999999 100%);
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .error-message {
-  padding: 0.75rem;
-  background-color: #ffebee;
-  border-left: 4px solid #f44336;
-  border-radius: 4px;
-  color: #c62828;
-  font-size: 0.9rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-left: 5px solid #f44336;
+  border-radius: 8px;
+  color: #b71c1c;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
 }
 
 .success-message {
-  padding: 0.75rem;
-  background-color: #e8f5e9;
-  border-left: 4px solid #4CAF50;
-  border-radius: 4px;
-  color: #2e7d32;
-  font-size: 0.9rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left: 5px solid #4CAF50;
+  border-radius: 8px;
+  color: #1b5e20;
+  font-size: 0.95rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
 }
 
 .connection-note {
-  margin-top: 0.5rem;
-  padding: 0.75rem;
-  background-color: #fff3cd;
-  border-left: 4px solid #ffc107;
-  border-radius: 4px;
+  margin-top: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffe082 100%);
+  border-left: 5px solid #ffc107;
+  border-radius: 8px;
   color: #856404;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
 }
 
 @media (max-width: 768px) {
   .database-connection-container {
-    padding: 1rem;
+    padding: 1.5rem;
+    border-radius: 14px;
+  }
+
+  .connection-header h3 {
+    font-size: 1.35rem;
   }
 }
