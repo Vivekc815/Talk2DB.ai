@@ -87,10 +87,13 @@ def parse_pdf(file_content: bytes, filename: str = "document") -> Dict:
         # Use AI to extract schema from PDF text
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
+        # Limit PDF text to avoid token limits
+        limited_text = pdf_text[:3000]
+        
         prompt = f"""Analyze the following database documentation text and extract database schema information (tables and columns).
 
 Text from PDF:
-{pdf_text[:3000]}  # Limit to avoid token limits
+{limited_text}
 
 Extract any CREATE TABLE statements, table definitions, or database schema information.
 If you find database tables, list them in this format:
@@ -126,13 +129,32 @@ If no schema is found, return empty tables array."""
         result = json.loads(response.choices[0].message.content)
         
         # Validate and format result
-        if "tables" in result:
+        if "tables" in result and result["tables"]:
             return result
         else:
-            return {"tables": []}
+            return {
+                "tables": [],
+                "error": "No database schema found in PDF. Please ensure the PDF contains database documentation with table definitions (CREATE TABLE statements or table descriptions)."
+            }
             
     except Exception as e:
-        raise Exception(f"Error parsing PDF: {str(e)}")
+        error_msg = str(e)
+        # Provide more helpful error messages
+        if "pdfplumber" in error_msg.lower():
+            return {
+                "tables": [],
+                "error": f"Error reading PDF file: {error_msg}. Make sure the file is a valid PDF with readable text (not scanned images)."
+            }
+        elif "openai" in error_msg.lower() or "api" in error_msg.lower():
+            return {
+                "tables": [],
+                "error": f"Error processing PDF with AI: {error_msg}. Please check your OpenAI API key is set correctly."
+            }
+        else:
+            return {
+                "tables": [],
+                "error": f"Error parsing PDF: {error_msg}"
+            }
 
 def schema_to_text(schema: Dict) -> str:
     """Convert schema dictionary to text format for NLP"""

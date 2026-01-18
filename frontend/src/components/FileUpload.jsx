@@ -60,7 +60,8 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
         setError(response.error || 'Upload failed');
       }
     } catch (err) {
-      setError(err.message || 'Failed to upload file');
+      const errorMessage = err.response?.data?.error || err.message || 'Failed to upload file';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

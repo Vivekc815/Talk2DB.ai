@@ -223,9 +223,9 @@ body::before {
 
 /* Sidebar - Grid Cards */
 .sidebar {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
   padding-right: 0.5rem;
