@@ -141,6 +141,17 @@ body {
   line-height: 1.5;
 }
 
+.schema-indicator {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196F3;
+  border-radius: 6px;
+  color: #1565c0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .error-message {
   margin-top: 1rem;
   padding: 1rem 1.5rem;

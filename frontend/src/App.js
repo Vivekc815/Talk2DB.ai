@@ -3,6 +3,8 @@ import { queryAPI } from './services/api';
 import QueryInput from './components/QueryInput';
 import QueryResults from './components/QueryResults';
 import DatabaseSchema from './components/DatabaseSchema';
+import FileUpload from './components/FileUpload';
+import SchemaManager from './components/SchemaManager';
 import History from './components/History';
 import './App.css';
 
@@ -10,6 +12,7 @@ function App() {
   const [queryData, setQueryData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedSchemaId, setSelectedSchemaId] = useState(null);
   
   // Initialize user_id from localStorage or generate new one
   const [userId, setUserId] = useState(() => {
@@ -29,7 +32,7 @@ function App() {
     setQueryData(null);
 
     try {
-      const response = await queryAPI.submitQuery(query, userId);
+      const response = await queryAPI.submitQuery(query, userId, selectedSchemaId);
       setQueryData(response);
     } catch (err) {
       setError(err.message || 'An error occurred while processing your query');
@@ -45,6 +48,16 @@ function App() {
       setUserId(userIdNum);
       localStorage.setItem('talk2db_user_id', userIdNum.toString());
     }
+  };
+
+  const handleSchemaUploaded = (response) => {
+    // Refresh schema list if needed
+    console.log('Schema uploaded:', response);
+    // You could reload schemas here
+  };
+
+  const handleSchemaSelect = (schemaId) => {
+    setSelectedSchemaId(schemaId);
   };
 
   return (
@@ -72,9 +85,16 @@ function App() {
 
       <main className="app-main">
         <div className="main-content">
-          {/* Database Schema - Sidebar */}
+          {/* Sidebar */}
           <aside className="sidebar">
             <DatabaseSchema />
+            
+            {/* File Upload Section */}
+            <FileUpload userId={userId} onSchemaUploaded={handleSchemaUploaded} />
+            
+            {/* Schema Manager */}
+            <SchemaManager userId={userId} onSchemaSelect={handleSchemaSelect} />
+            
             <History userId={userId} />
           </aside>
 
@@ -84,6 +104,11 @@ function App() {
               <div className="section-header">
                 <h2>📝 Ask Your Question</h2>
                 <p className="section-description">Type your question in natural language and see how it translates to SQL</p>
+                {selectedSchemaId && (
+                  <div className="schema-indicator">
+                    💡 Using uploaded schema for query generation
+                  </div>
+                )}
               </div>
               
               <QueryInput onSubmit={handleQuerySubmit} isLoading={isLoading} />
