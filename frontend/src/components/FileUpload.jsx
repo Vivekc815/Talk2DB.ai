@@ -57,11 +57,24 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
           onSchemaUploaded(response);
         }
       } else {
-        setError(response.error || 'Upload failed');
+        const errorMsg = response.error || 'Upload failed';
+        setError(errorMsg);
+        console.error('Upload error:', errorMsg);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to upload file';
+      // Extract error message from various possible formats
+      let errorMessage = 'Failed to upload file';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
+      console.error('Upload exception:', err);
     } finally {
       setLoading(false);
     }

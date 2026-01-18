@@ -257,34 +257,76 @@ async def upload_pdf_file(
 ):
     """Upload PDF file and extract schema using AI"""
     try:
+        # Validate file type
+        if not file.filename or not file.filename.lower().endswith('.pdf'):
+            return {
+                "success": False,
+                "error": "Invalid file type. Please upload a PDF file (.pdf extension required)."
+            }
+        
         # Read file content
         content = await file.read()
         filename = file.filename or "document"
         
-        # Parse PDF
-        schema_dict = parse_pdf(content, filename)
-        
-        if not schema_dict.get("tables"):
+        # Check file size (max 10MB)
+        if len(content) > 10 * 1024 * 1024:
             return {
                 "success": False,
-                "error": schema_dict.get("error", "No database schema found in PDF. Please ensure the PDF contains database documentation with table definitions.")
+                "error": "File too large. Please upload a PDF file smaller than 10MB."
+            }
+        
+        if len(content) == 0:
+            return {
+                "success": False,
+                "error": "PDF file is empty. Please upload a valid PDF file."
+            }
+        
+        # Parse PDF
+        try:
+            schema_dict = parse_pdf(content, filename)
+        except Exception as parse_error:
+            print(f"PDF parsing error: {str(parse_error)}")
+            return {
+                "success": False,
+                "error": f"Error parsing PDF: {str(parse_error)}. Make sure the PDF contains readable text."
+            }
+        
+        # Check if parsing returned an error
+        if "error" in schema_dict:
+            return {
+                "success": False,
+                "error": schema_dict["error"]
+            }
+        
+        if not schema_dict.get("tables") or len(schema_dict.get("tables", [])) == 0:
+            return {
+                "success": False,
+                "error": schema_dict.get("error", "No database schema found in PDF. Please ensure the PDF contains database documentation with table definitions (CREATE TABLE statements or table descriptions).")
             }
         
         # Convert to text format
         schema_text = doc_schema_to_text(schema_dict)
         
         # Save schema to database
-        schema_record = database_schema(
-            user_id=user_id,
-            schema_name=schema_name,
-            schema_type="pdf",
-            schema_data=json.dumps(schema_dict),
-            file_name=file.filename,
-            is_active=True
-        )
-        db.add(schema_record)
-        db.commit()
-        db.refresh(schema_record)
+        try:
+            schema_record = database_schema(
+                user_id=user_id,
+                schema_name=schema_name,
+                schema_type="pdf",
+                schema_data=json.dumps(schema_dict),
+                file_name=file.filename,
+                is_active=True
+            )
+            db.add(schema_record)
+            db.commit()
+            db.refresh(schema_record)
+        except Exception as db_error:
+            db.rollback()
+            print(f"Database error: {str(db_error)}")
+            return {
+                "success": False,
+                "error": f"Error saving schema to database: {str(db_error)}"
+            }
         
         return {
             "success": True,
@@ -296,9 +338,12 @@ async def upload_pdf_file(
         }
     except Exception as e:
         db.rollback()
+        print(f"PDF upload error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return {
             "success": False,
-            "error": str(e)
+            "error": f"Failed to upload PDF: {str(e)}. Please check the file is a valid PDF and try again."
         }
 
 @app.post("/connect/database")
