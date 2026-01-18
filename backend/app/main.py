@@ -11,7 +11,7 @@ import traceback
 from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel
-from app.api.v1.history import history_store
+# from app.api.v1.history import history_store  # Not used, commented out
 from app.core.database import SessionLocal, engine
 from app.models import database_models
 from app.models.database_models import query_history, database_schema
