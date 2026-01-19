@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
+// Log API configuration for debugging
+console.log('📡 Axios API instance created with baseURL:', API_BASE_URL);
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,6 +12,36 @@ const api = axios.create({
   },
   timeout: 30000, // 30 seconds timeout
 });
+
+// Add request interceptor to log requests
+api.interceptors.request.use(
+  (config) => {
+    console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => {
+    console.error('❌ API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to log responses and errors
+api.interceptors.response.use(
+  (response) => {
+    console.log(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.status);
+    return response;
+  },
+  (error) => {
+    console.error('❌ API Response Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      code: error.code,
+    });
+    return Promise.reject(error);
+  }
+);
 
 // API functions
 export const queryAPI = {
