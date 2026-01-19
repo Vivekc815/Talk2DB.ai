@@ -65,12 +65,22 @@ const FileUpload = ({ userId, onSchemaUploaded }) => {
       // Extract error message from various possible formats
       let errorMessage = 'Failed to upload file';
       
-      if (err.response?.data?.error) {
+      // Handle different error formats
+      if (err.error) {
+        errorMessage = err.error;
+      } else if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.response?.data?.message) {
         errorMessage = err.response.data.message;
       } else if (err.message) {
         errorMessage = err.message;
+      }
+      
+      // Special handling for network errors
+      if (errorMessage.toLowerCase().includes('network') || 
+          errorMessage.toLowerCase().includes('timeout') ||
+          errorMessage.toLowerCase().includes('connection')) {
+        errorMessage = `🌐 ${errorMessage}\n\n💡 Tips:\n- Check your internet connection\n- Try a smaller PDF file (< 5MB)\n- Make sure the PDF contains readable text (not scanned images)\n- Wait a moment and try again`;
       }
       
       setError(errorMessage);

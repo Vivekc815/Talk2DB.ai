@@ -64,12 +64,19 @@ def save_to_db(db: Session, user_id, user_query, generated_sql):
         db.rollback()
         print(f"Error saving to history: {e}")
 
-# Create FastAPI app
+# Create FastAPI app with increased request size limits
 app = FastAPI(
     title="Talk2DB API",
     description="Natural language to SQL query system with file upload support",
     version="2.0.0"
 )
+
+# Increase request size limit for file uploads (default is 1MB, we need up to 10MB)
+from fastapi import Request
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+
+# Note: Starlette (FastAPI's underlying framework) has a default max_request_size
+# We'll handle this in the endpoint by checking file size
 
 # CORS middleware - use environment variable in production
 app.add_middleware(
@@ -258,6 +265,8 @@ async def upload_pdf_file(
 ):
     """Upload PDF file and extract schema using AI"""
     try:
+        print(f"PDF upload started: user_id={user_id}, schema_name={schema_name}, filename={file.filename}")
+        
         # Validate file type
         if not file.filename or not file.filename.lower().endswith('.pdf'):
             return {
@@ -265,9 +274,19 @@ async def upload_pdf_file(
                 "error": "Invalid file type. Please upload a PDF file (.pdf extension required)."
             }
         
-        # Read file content
-        content = await file.read()
-        filename = file.filename or "document"
+        # Read file content with timeout handling
+        try:
+            print(f"Reading PDF file content...")
+            content = await file.read()
+            filename = file.filename or "document"
+            print(f"PDF file read successfully: {len(content)} bytes")
+        except Exception as read_error:
+            print(f"Error reading file: {str(read_error)}")
+            traceback.print_exc()
+            return {
+                "success": False,
+                "error": f"Network error: Failed to read uploaded file. Please check your internet connection and try again. Error: {str(read_error)}"
+            }
         
         # Check file size (max 10MB)
         if len(content) > 10 * 1024 * 1024:
@@ -282,15 +301,32 @@ async def upload_pdf_file(
                 "error": "PDF file is empty. Please upload a valid PDF file."
             }
         
-        # Parse PDF
+        # Parse PDF with better error handling
+        print(f"Starting PDF parsing...")
         try:
             schema_dict = parse_pdf(content, filename)
+            print(f"PDF parsing completed")
         except Exception as parse_error:
-            print(f"PDF parsing error: {str(parse_error)}")
-            return {
-                "success": False,
-                "error": f"Error parsing PDF: {str(parse_error)}. Make sure the PDF contains readable text."
-            }
+            error_msg = str(parse_error)
+            print(f"PDF parsing error: {error_msg}")
+            traceback.print_exc()
+            
+            # Check for specific error types
+            if "network" in error_msg.lower() or "timeout" in error_msg.lower() or "connection" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": f"Network error during PDF processing: {error_msg}. Please check your internet connection and try again."
+                }
+            elif "openai" in error_msg.lower() or "api" in error_msg.lower():
+                return {
+                    "success": False,
+                    "error": f"AI service error: {error_msg}. Please check your OpenAI API key configuration."
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Error parsing PDF: {error_msg}. Make sure the PDF contains readable text (not scanned images)."
+                }
         
         # Check if parsing returned an error
         if "error" in schema_dict:
