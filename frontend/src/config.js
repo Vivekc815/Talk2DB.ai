@@ -2,7 +2,11 @@
 const getApiBaseUrl = () => {
   // Check if we have environment variable (production)
   if (process.env.REACT_APP_API_URL) {
-    const url = process.env.REACT_APP_API_URL;
+    let url = process.env.REACT_APP_API_URL;
+    // Prevent mixed-content issues: if site is https but API is http, browser blocks (often shown as "Network error").
+    if (typeof window !== 'undefined' && window.location?.protocol === 'https:' && url.startsWith('http://')) {
+      url = url.replace('http://', 'https://');
+    }
     console.log('Using API URL from environment:', url);
     return url;
   }

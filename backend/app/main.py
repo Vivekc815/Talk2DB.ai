@@ -24,7 +24,9 @@ load_dotenv()
 
 # Get environment variables
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", FRONTEND_URL).split(",") if os.getenv("ALLOWED_ORIGINS") else [FRONTEND_URL]
+raw_allowed = os.getenv("ALLOWED_ORIGINS", FRONTEND_URL)
+# Render env vars often include spaces after commas; strip to avoid CORS mismatches.
+ALLOWED_ORIGINS = [o.strip() for o in raw_allowed.split(",") if o.strip()] if raw_allowed else [FRONTEND_URL]
 
 class HistorySaveRequest(BaseModel):
     user_id: int
