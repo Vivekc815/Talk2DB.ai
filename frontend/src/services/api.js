@@ -94,15 +94,39 @@ export const queryAPI = {
       formData.append('user_id', userId);
       formData.append('schema_name', schemaName);
 
+      console.log(`Uploading PDF: ${file.name}, size: ${(file.size / 1024).toFixed(2)} KB`);
+
       const response = await api.post('/upload/pdf', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 120000, // 120 seconds for PDF processing (AI takes time)
+        timeout: 300000, // 5 minutes for PDF processing (AI can take time)
+        maxContentLength: 50 * 1024 * 1024, // 50MB max response size
+        maxBodyLength: 50 * 1024 * 1024, // 50MB max request size
       });
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: error.message };
+      console.error('PDF upload error:', error);
+      
+      // Better error handling for network errors
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        throw {
+          success: false,
+          error: 'Upload timeout: The PDF is taking too long to process. Please try a smaller PDF file or check your internet connection.'
+        };
+      } else if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
+        throw {
+          success: false,
+          error: 'Network error: Cannot connect to server. Please check your internet connection and try again.'
+        };
+      } else if (error.response?.data) {
+        throw error.response.data;
+      } else {
+        throw {
+          success: false,
+          error: error.message || 'Failed to upload PDF file. Please try again.'
+        };
+      }
     }
   },
 
